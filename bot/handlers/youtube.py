@@ -1,77 +1,64 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 
 from bot.services.youtube_service import YouTubeService
 from bot.utils.keyboards import youtube_formats_keyboard
 
 router = Router()
-yt_service = YouTubeService()
+yt = YouTubeService()
 
-# простая проверка, потом можно вынести в validators
-def is_youtube_url(text: str) -> bool:
-    if not text:
-        return False
-    return any(x in text for x in ("youtube.com", "youtu.be"))
+
+def format_duration(sec: int | None) -> str:
+    if not sec:
+        return "?"
+    m, s = divmod(sec, 60)
+    h, m = divmod(m, 60)
+    if h:
+        return f"{h}:{m:02d}:{s:02d}"
+    return f"{m}:{s:02d}"
+
 
 @router.message(F.text)
 async def youtube_entry(message: Message):
     url = message.text.strip()
 
-    if not is_youtube_url(url):
-        # можно молча игнорировать или отвечать
+    if not await yt.validate(url):
         return
 
-    await message.answer("Получаю доступные форматы... ⏳")
+    info = await yt.get_info(url)
+    formats = await yt.get_formats(url)
 
-    try:
-        formats = await yt_service.get_formats(url)
-    except Exception:
-        await message.answer("Не удалось получить форматы видео. Попробуй другую ссылку.")
-        return
+    caption = (
+        f"<b>{info['title']}</b>\n"
+        f"⏱ Длительность: {format_duration(info['duration'])}\n\n"
+        f"Выбери качество 👇"
+    )
 
-    if not formats:
-        await message.answer("Не нашёл подходящих форматов для скачивания.")
-        return
+    kb = youtube_formats_keyboard(formats)
 
-    kb = youtube_formats_keyboard(formats, url)
-    # сохраняем URL в message, чтобы не тащить его в callback_data
-    await message.answer(
-        "Выбери качество видео 👇",
+    await message.answer_photo(
+        photo=info["thumbnail"],
+        caption=caption,
         reply_markup=kb
     )
 
-    # можно сохранить url в state/БД, но для простоты — в отдельном хендлере ниже
 
-
-# Простой вариант: URL берём из reply_to_message
 @router.callback_query(F.data.startswith("yt:"))
 async def youtube_download(call: CallbackQuery):
-    format_id = call.data.split(":", maxsplit=1)[1]
+    format_id = call.data.split(":")[1]
+    url = call.message.caption_entities[0].url if call.message.caption_entities else None
 
-    # ищем URL в сообщении, на которое бот ответил
-    replied = call.message.reply_to_message if call.message else None
-    if not replied or not replied.text or not is_youtube_url(replied.text.strip()):
-        await call.answer("Не удалось определить ссылку на видео.", show_alert=True)
-        return
+    # fallback: ищем URL в reply_to_message
+    if not url:
+        replied = call.message.reply_to_message
+        if replied:
+            url = replied.text.strip()
 
-    url = replied.text.strip()
+    await call.answer("Скачиваю...")
 
-    await call.answer("Скачиваю видео... ⏳", show_alert=False)
+    file_path = await yt.download(url, format_id)
 
-    try:
-        file_path = await yt_service.download(url, format_id)
-    except Exception:
-        await call.message.answer("Ошибка при скачивании видео.")
-        return
-
-    try:
-        await call.message.answer_video(
-            video=open(file_path, "rb"),
-            caption="Готово! 🎬"
-        )
-    except Exception:
-        await call.message.answer_document(
-            document=open(file_path, "rb"),
-            caption="Готово! 🎬 (отправлено как файл)"
-        )
-
+    await call.message.answer_video(
+        video=open(file_path, "rb"),
+        caption="Готово 🎉"
+    )
