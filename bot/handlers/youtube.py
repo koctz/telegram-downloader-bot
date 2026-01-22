@@ -1,21 +1,11 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery
 
 from bot.services.youtube_service import YouTubeService
 from bot.utils.keyboards import youtube_formats_keyboard
 
 router = Router()
 yt = YouTubeService()
-
-
-def format_duration(sec: int | None) -> str:
-    if not sec:
-        return "?"
-    m, s = divmod(sec, 60)
-    h, m = divmod(m, 60)
-    if h:
-        return f"{h}:{m:02d}:{s:02d}"
-    return f"{m}:{s:02d}"
 
 
 @router.message(F.text)
@@ -30,11 +20,11 @@ async def youtube_entry(message: Message):
 
     caption = (
         f"<b>{info['title']}</b>\n"
-        f"⏱ Длительность: {format_duration(info['duration'])}\n\n"
+        f"⏱ Длительность: {yt.format_duration(info['duration'])}\n\n"
         f"Выбери качество 👇"
     )
 
-    kb = youtube_formats_keyboard(formats)
+    kb = youtube_formats_keyboard(formats, url)
 
     await message.answer_photo(
         photo=info["thumbnail"],
@@ -55,4 +45,3 @@ async def youtube_download(call: CallbackQuery):
         video=open(file_path, "rb"),
         caption="Готово 🎉"
     )
-
