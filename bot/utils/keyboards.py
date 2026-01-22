@@ -28,4 +28,3 @@ def youtube_formats_keyboard(formats, url):
             )
         ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
