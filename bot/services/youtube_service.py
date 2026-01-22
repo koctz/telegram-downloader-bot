@@ -60,3 +60,12 @@ class YouTubeService(BaseDownloaderService):
                 info = ydl.extract_info(url, download=True)
                 return ydl.prepare_filename(info)
         return await asyncio.to_thread(run)
+
+    def format_duration(self, sec: int | None) -> str:
+        if not sec:
+            return "?"
+        m, s = divmod(sec, 60)
+        h, m = divmod(m, 60)
+        if h:
+            return f"{h}:{m:02d}:{s:02d}"
+        return f"{m}:{s:02d}"
