@@ -45,14 +45,7 @@ async def youtube_entry(message: Message):
 
 @router.callback_query(F.data.startswith("yt:"))
 async def youtube_download(call: CallbackQuery):
-    format_id = call.data.split(":")[1]
-    url = call.message.caption_entities[0].url if call.message.caption_entities else None
-
-    # fallback: ищем URL в reply_to_message
-    if not url:
-        replied = call.message.reply_to_message
-        if replied:
-            url = replied.text.strip()
+    _, format_id, url = call.data.split(":", maxsplit=2)
 
     await call.answer("Скачиваю...")
 
@@ -62,3 +55,4 @@ async def youtube_download(call: CallbackQuery):
         video=open(file_path, "rb"),
         caption="Готово 🎉"
     )
+
