@@ -12,7 +12,7 @@ def human_size(size):
     return f"{ceil(size)} TB"
 
 
-def youtube_formats_keyboard(formats):
+def youtube_formats_keyboard(formats, url):
     rows = []
     for f in formats:
         text = (
@@ -24,7 +24,8 @@ def youtube_formats_keyboard(formats):
         rows.append([
             InlineKeyboardButton(
                 text=text,
-                callback_data=f"yt:{f['format_id']}"
+                callback_data=f"yt:{f['format_id']}:{url}"
             )
         ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
