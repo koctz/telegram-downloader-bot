@@ -1,7 +1,8 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from math import ceil
 
-def human_size(size: int | None) -> str:
+
+def human_size(size):
     if not size:
         return "?"
     for unit in ["B", "KB", "MB", "GB"]:
@@ -10,19 +11,20 @@ def human_size(size: int | None) -> str:
         size /= 1024
     return f"{ceil(size)} TB"
 
-def youtube_formats_keyboard(formats, url: str) -> InlineKeyboardMarkup:
+
+def youtube_formats_keyboard(formats):
     rows = []
     for f in formats:
-        height = f["height"]
-        fps = f.get("fps") or "?"
-        ext = f["ext"]
-        size = human_size(f.get("filesize"))
-
-        text = f"{height}p {fps}fps • {ext} • {size}"
-        cb_data = f"yt:{f['format_id']}"
-
-        rows.append([InlineKeyboardButton(text=text, callback_data=cb_data)])
-
-    # можно сделать пагинацию позже, если форматов слишком много
+        text = (
+            f"🎞 {f['height']}p"
+            f" • {f['fps'] or '?'}fps"
+            f" • {f['ext']}"
+            f" • {human_size(f['filesize'])}"
+        )
+        rows.append([
+            InlineKeyboardButton(
+                text=text,
+                callback_data=f"yt:{f['format_id']}"
+            )
+        ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
